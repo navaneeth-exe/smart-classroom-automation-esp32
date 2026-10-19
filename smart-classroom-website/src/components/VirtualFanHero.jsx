@@ -35,6 +35,7 @@ export default function VirtualFanHero({
   lastUpdated = null,
   onSetManualSpeed,
   onReturnToAuto,
+  className = '',
 }) {
   const hasValidTemp =
     temperature !== null &&
@@ -79,7 +80,7 @@ export default function VirtualFanHero({
   ];
 
   return (
-    <section className="relative w-full rounded-3xl bg-white/75 backdrop-blur-xl border border-stone-200/80 shadow-glass overflow-hidden p-5 sm:p-7 transition-all">
+    <section className={`relative w-full rounded-3xl bg-white/75 backdrop-blur-xl border border-stone-200/80 shadow-glass overflow-hidden p-5 sm:p-7 transition-all flex flex-col justify-between ${className}`}>
       {/* Top Banner / Breadcrumb & Status */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-stone-100">
         <div className="flex items-center gap-2.5">
@@ -127,12 +128,12 @@ export default function VirtualFanHero({
         </div>
       </div>
 
-      {/* Main Showcase Layout: Left 3D Stage (Dominant ~65%) & Right Telemetry & Controls (~35%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center py-4">
+      {/* Main Showcase Layout: Left 3D Stage (Dominant ~58%) & Right Telemetry & Controls (~42%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center py-4 flex-1">
         {/* =====================================================================
-            1. DOMINANT 3D VIRTUAL FAN STAGE (lg:col-span-7 or 8)
+            1. DOMINANT 3D VIRTUAL FAN STAGE (lg:col-span-7)
             ===================================================================== */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col items-center justify-center relative min-h-[340px] sm:min-h-[400px] rounded-3xl bg-gradient-to-b from-[#fdfbf7] via-[#f7f4ed] to-[#ede7dc]/60 border border-stone-200/70 shadow-inner overflow-hidden">
+        <div className="lg:col-span-7 xl:col-span-7 flex flex-col items-center justify-center relative min-h-[340px] sm:min-h-[390px] rounded-3xl bg-gradient-to-b from-[#fdfbf7] via-[#f7f4ed] to-[#ede7dc]/60 border border-stone-200/70 shadow-inner overflow-hidden">
           {/* Warm architectural sunlight aura behind fan */}
           <div className="absolute -top-10 left-1/3 w-80 h-80 rounded-full bg-amber-300/20 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-12 right-1/4 w-72 h-72 rounded-full bg-purple-200/15 blur-3xl pointer-events-none" />
@@ -141,8 +142,8 @@ export default function VirtualFanHero({
           <CeilingFan3D
             mode={virtualFanMode}
             isAuto={virtualFanAuto}
-            height={380}
-            className="w-full max-w-[560px] mx-auto z-10"
+            height={370}
+            className="w-full max-w-[540px] mx-auto z-10"
           />
 
           {/* Floating Subtle Fan Badge */}
@@ -156,9 +157,9 @@ export default function VirtualFanHero({
         </div>
 
         {/* =====================================================================
-            2. TELEMETRY, AUTOMATION STATUS & CONTROLS (lg:col-span-5 or 4)
+            2. TELEMETRY, AUTOMATION STATUS & CONTROLS (lg:col-span-5)
             ===================================================================== */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-5 xl:col-span-5 flex flex-col justify-between space-y-3.5">
           {/* Prominent Temperature Display Card */}
           <div className="p-4 sm:p-5 rounded-3xl bg-white/90 border border-stone-200/80 shadow-sm">
             <div className="flex items-center justify-between mb-2">
