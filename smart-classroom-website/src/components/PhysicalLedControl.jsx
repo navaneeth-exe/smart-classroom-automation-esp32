@@ -42,6 +42,7 @@ export default function PhysicalLedControl({
   const [errorMessage, setErrorMessage] = useState(null);
 
   const isLightOn = Boolean(data?.led);
+  const isConfirmedOn = Boolean((isOnline || isTestMode) && isLightOn);
   const autoLight = Boolean(data?.autoLight);
   const ldrVal = data?.ldr;
   const isDark = Boolean(data?.dark);
@@ -150,34 +151,34 @@ export default function PhysicalLedControl({
           </span>
         </div>
 
-        {/* 3D WebGL Bulb Stage: Smooth ambient crossfade between muted beige-gray (OFF) and warm ivory (ON) */}
+        {/* 3D WebGL Bulb Stage: Creamy ivory when OFF, slightly darker warm beige-gray with soft radial glow when ON */}
         <div className="relative rounded-2xl min-h-[175px] sm:min-h-[195px] flex items-center justify-center overflow-hidden border border-stone-200/80 shadow-inner">
-          {/* Muted beige-gray background for confirmed OFF state (gentle darkening, preserving bulb visibility) */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#e8e4de] via-[#ded9d0] to-[#d0cbc2]" />
+          {/* Light, creamy ivory background for confirmed OFF state (original light, evenly illuminated) */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#fbf9f4] via-[#f4efe5] to-[#eae2d3]" />
 
-          {/* Warm ivory background for confirmed ON state (crossfades smoothly over 500ms) */}
+          {/* Subtle warm beige/muted amber-gray background for confirmed ON state (slightly darker/warmer than OFF) */}
           <div
-            className={`absolute inset-0 bg-gradient-to-b from-[#fdfbf7] via-[#f7f2ea] to-[#eee6d8] transition-opacity duration-500 ease-out pointer-events-none ${
-              isLightOn && isOnline ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 bg-gradient-to-b from-[#ded8cd] via-[#d5cdbf] to-[#c5bcae] transition-opacity duration-500 ease-out pointer-events-none ${
+              isConfirmedOn ? 'opacity-100' : 'opacity-0'
             }`}
           />
 
-          {/* Small, soft warm radial glow centered around the bulb when illuminated */}
+          {/* Small, soft warm radial glow centered around the bulb when ON (localized, does not wash out the darker background) */}
           <div
-            className={`absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-56 sm:h-56 rounded-full pointer-events-none transition-opacity duration-500 ease-out ${
-              isLightOn && isOnline ? 'opacity-100' : 'opacity-0'
+            className={`absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 w-40 h-40 sm:w-44 sm:h-44 rounded-full pointer-events-none transition-opacity duration-500 ease-out ${
+              isConfirmedOn ? 'opacity-100' : 'opacity-0'
             }`}
             style={{
               background:
-                'radial-gradient(circle, rgba(254, 243, 199, 0.70) 0%, rgba(251, 191, 36, 0.28) 32%, rgba(245, 158, 11, 0.08) 58%, transparent 75%)',
-              filter: 'blur(14px)',
+                'radial-gradient(circle, rgba(254, 240, 138, 0.40) 0%, rgba(251, 191, 36, 0.18) 32%, rgba(245, 158, 11, 0.05) 55%, transparent 72%)',
+              filter: 'blur(10px)',
             }}
           />
 
           <Bulb3D
-            isOn={isLightOn}
+            isOn={isConfirmedOn}
             isPending={isPending}
-            isOnline={isOnline}
+            isOnline={isOnline || isTestMode}
             height={165}
             className="w-full max-w-[260px] mx-auto z-10"
           />
@@ -186,11 +187,11 @@ export default function PhysicalLedControl({
           <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/90 backdrop-blur-md border border-stone-200/80 shadow-sm text-[10px]">
             <span className="text-stone-400 font-medium">Bulb State:</span>
             <span className="font-bold text-stone-800">
-              {isLightOn && isOnline ? 'Illuminated' : 'Extinguished'}
+              {isConfirmedOn ? 'Illuminated' : 'Extinguished'}
             </span>
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                isLightOn && isOnline
+                isConfirmedOn
                   ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.9)] animate-pulse'
                   : 'bg-stone-300'
               }`}

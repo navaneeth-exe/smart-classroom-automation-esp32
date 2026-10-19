@@ -97,8 +97,8 @@ export default function Bulb3D({
     // =====================================================================
     // STUDIO LIGHTING
     // =====================================================================
-    // Soft ambient fill — gently muted when OFF, warm when ON
-    const ambientLight = new THREE.AmbientLight(0xf5f0e8, 0.95);
+    // Soft ambient fill — softly and evenly illuminated when OFF, slightly deeper when ON
+    const ambientLight = new THREE.AmbientLight(0xf5f0e8, 1.15);
     scene.add(ambientLight);
 
     // Key light — warm, upper-right, creates specular highlight on glass
@@ -370,9 +370,9 @@ export default function Bulb3D({
       }
 
       // ---------------------------------------------------------------
-      // STUDIO & AMBIENT LIGHTING — gentle reduction when OFF, warm boost when ON
+      // STUDIO & AMBIENT LIGHTING — softly and evenly illuminated when OFF, slightly deeper when ON
       // ---------------------------------------------------------------
-      ambientLight.intensity = 0.95 + glow * 0.35;
+      ambientLight.intensity = 1.15 - glow * 0.10;
 
       // ---------------------------------------------------------------
       // FILAMENT STRIPS — the main visual difference between ON and OFF
