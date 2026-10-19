@@ -3,16 +3,34 @@ import * as THREE from 'three';
 
 /**
  * ==============================================================================
- * Realistic 3D Virtual Bulb (Three.js WebGL)
+ * Photorealistic 3D LED Bulb (Three.js WebGL)
  * ==============================================================================
- * Genuine 3D procedural geometry for physical LED visualization:
- * - Rounded pear-shaped glass envelope (procedural LatheGeometry)
- * - Tapered neck transition & screw base (E26/E27 metallic threaded cylinder)
- * - Central vintage/modern LED filament structure on glass mount
- * - Emissive warmth & local point illumination when confirmed ON
- * - Neutral refractive glass and unlit tungsten filament when confirmed OFF
- * - Stationary (never rotates) with smooth state transitions
- * - Clean WebGL resource disposal on unmount
+ * Modern LED A19 bulb with physically convincing construction:
+ *
+ * GLASS ENVELOPE — LatheGeometry pear-shaped contour with MeshPhysicalMaterial
+ *   using transmission for real refraction. Stays clear in both states; only
+ *   picks up a faint warm tint when illuminated.
+ *
+ * LED FILAMENT ASSEMBLY — 8 thin vertical LED strip bars arranged in a
+ *   cylindrical pattern around a tiny central post. Each strip is a narrow
+ *   CylinderGeometry (radius 0.007). When OFF they are dark grey; when ON
+ *   they glow warm white (~2700 K) via emissive material. No giant yellow
+ *   sphere — the glow comes from these thin elements only.
+ *
+ * INTERNAL STRUCTURE — glass support stem, two metallic lead wires, and a
+ *   small hub disc connecting the filament strips to the stem.
+ *
+ * SCREW BASE — E27 brass cylinder with 4 torus thread ridges, black
+ *   insulator ring, and copper contact tip.
+ *
+ * LIGHTING — warm point light at filament center (only active when ON),
+ *   studio key light, rim light, and soft ambient.
+ *
+ * STATE TRANSITIONS — smooth lerp between OFF and ON. Glass stays clear,
+ *   filament strips transition from cold grey to glowing amber-white,
+ *   point light ramps up. No rotation, no overlay, no background change.
+ *
+ * RESOURCE MANAGEMENT — all geometries and materials disposed on unmount.
  */
 
 export default function Bulb3D({
@@ -25,7 +43,6 @@ export default function Bulb3D({
   const containerRef = useRef(null);
   const [webglSupported, setWebglSupported] = useState(true);
 
-  // References for animation state
   const stateRef = useRef({
     isOn,
     isPending,
@@ -34,7 +51,6 @@ export default function Bulb3D({
     targetGlow: isOn ? 1.0 : 0.0,
   });
 
-  // Keep state updated
   useEffect(() => {
     stateRef.current.isOn = isOn;
     stateRef.current.isPending = isPending;
@@ -46,31 +62,25 @@ export default function Bulb3D({
     const container = containerRef.current;
     if (!container) return;
 
-    // Check WebGL availability
+    // WebGL check
     try {
-      const testCanvas = document.createElement('canvas');
-      const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
-      if (!gl) {
-        setWebglSupported(false);
-        return;
-      }
-    } catch {
-      setWebglSupported(false);
-      return;
-    }
+      const tc = document.createElement('canvas');
+      const gl = tc.getContext('webgl') || tc.getContext('experimental-webgl');
+      if (!gl) { setWebglSupported(false); return; }
+    } catch { setWebglSupported(false); return; }
 
     const width = container.clientWidth || 140;
     const canvasHeight = height;
 
-    // 1. Scene Setup
+    // =====================================================================
+    // SCENE, CAMERA, RENDERER
+    // =====================================================================
     const scene = new THREE.Scene();
 
-    // 2. Camera Setup (fixed, attractive angle)
-    const camera = new THREE.PerspectiveCamera(34, width / canvasHeight, 0.1, 50);
-    camera.position.set(0, 0.05, 4.6);
-    camera.lookAt(0, 0.05, 0);
+    const camera = new THREE.PerspectiveCamera(32, width / canvasHeight, 0.1, 50);
+    camera.position.set(0.15, 0.1, 4.8);
+    camera.lookAt(0, 0.1, 0);
 
-    // 3. Renderer with transparent background
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
@@ -79,296 +89,350 @@ export default function Bulb3D({
     renderer.setSize(width, canvasHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
-    // 4. Studio Lighting
-    const ambientLight = new THREE.AmbientLight(0xfffdf7, 1.4);
+    // =====================================================================
+    // STUDIO LIGHTING
+    // =====================================================================
+    // Soft ambient fill — gently muted when OFF, warm when ON
+    const ambientLight = new THREE.AmbientLight(0xf5f0e8, 0.95);
     scene.add(ambientLight);
 
-    // Main studio key light casting highlights on glass curvature and metal screw
-    const keyLight = new THREE.DirectionalLight(0xfffaed, 2.5);
-    keyLight.position.set(3, 5, 4);
+    // Key light — warm, upper-right, creates specular highlight on glass
+    const keyLight = new THREE.DirectionalLight(0xfff8ef, 1.9);
+    keyLight.position.set(3, 4, 4);
     scene.add(keyLight);
 
-    // Rim light defining glass outer edges
-    const rimLight = new THREE.DirectionalLight(0xffedd5, 1.8);
-    rimLight.position.set(-3, -1, -3);
+    // Fill light — cooler, left side, reveals glass edge definition
+    const fillLight = new THREE.DirectionalLight(0xe8ecf0, 0.65);
+    fillLight.position.set(-3, 1, 2);
+    scene.add(fillLight);
+
+    // Rim light — back, defines glass silhouette
+    const rimLight = new THREE.DirectionalLight(0xfff5eb, 0.9);
+    rimLight.position.set(-1, -1, -3);
     scene.add(rimLight);
 
-    // Internal Point Light for emissive bulb glow
-    const bulbPointLight = new THREE.PointLight(0xf59e0b, 0.0, 4.0, 1.2);
-    bulbPointLight.position.set(0, 0.35, 0);
+    // Bulb internal point light — centered at filament hub, active when ON
+    const bulbPointLight = new THREE.PointLight(0xfde68a, 0, 3.5, 1.4);
+    bulbPointLight.position.set(0, 0.42, 0);
     scene.add(bulbPointLight);
 
-    // Track geometries for cleanup
-    const geometriesToDispose = [];
-    const registerGeom = (g) => {
-      geometriesToDispose.push(g);
-      return g;
-    };
+    // Geometry tracking for disposal
+    const geometries = [];
+    const materials = [];
+    const reg = (g) => { geometries.push(g); return g; };
+    const regMat = (m) => { materials.push(m); return m; };
 
-    // 5. Root Bulb Group (Stationary, upright, centered)
+    // =====================================================================
+    // ROOT GROUP
+    // =====================================================================
     const bulbGroup = new THREE.Group();
     bulbGroup.position.set(0, -0.05, 0);
-    // Subtle tilt to reveal depth and screw ridges
-    bulbGroup.rotation.x = 0.08;
+    bulbGroup.rotation.x = 0.06; // very subtle tilt
     scene.add(bulbGroup);
 
-    // =========================================================================
+    // =====================================================================
     // MATERIALS
-    // =========================================================================
+    // =====================================================================
 
-    // A. Glass Envelope Material — stays clear/translucent, lets internal glow shine through
-    const glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xfdfcfa,
+    // Glass — clear, refractive, with subtle specular highlights
+    const glassMat = regMat(new THREE.MeshPhysicalMaterial({
+      color: 0xfcfcfc,
       transparent: true,
-      opacity: 0.32,
-      roughness: 0.05,
+      opacity: 0.22,
+      roughness: 0.04,
       metalness: 0.0,
-      transmission: 0.92,
-      ior: 1.5,
+      transmission: 0.94,
+      thickness: 0.15,
+      ior: 1.52,
       emissive: new THREE.Color(0x000000),
-      emissiveIntensity: 0.0,
+      emissiveIntensity: 0,
       depthWrite: false,
-    });
+      side: THREE.DoubleSide,
+    }));
 
-    // B. Vintage Brass/Gold Screw Base
-    const brassBaseMaterial = new THREE.MeshStandardMaterial({
-      color: 0xc8aa6e,
-      roughness: 0.28,
-      metalness: 0.82,
-    });
+    // Brass screw base
+    const brassMat = regMat(new THREE.MeshStandardMaterial({
+      color: 0xc9a96e,
+      roughness: 0.25,
+      metalness: 0.85,
+    }));
 
-    // C. Base Insulator & Contact Point
-    const insulatorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1f242d,
-      roughness: 0.6,
-      metalness: 0.2,
-    });
+    // Black insulator
+    const insulatorMat = regMat(new THREE.MeshStandardMaterial({
+      color: 0x1a1d23,
+      roughness: 0.55,
+      metalness: 0.15,
+    }));
 
-    const contactPointMaterial = new THREE.MeshStandardMaterial({
-      color: 0x92612b,
+    // Copper contact tip
+    const contactMat = regMat(new THREE.MeshStandardMaterial({
+      color: 0xa0703a,
       roughness: 0.3,
       metalness: 0.9,
-    });
+    }));
 
-    // D. Central Glass Stem & Internal Support Wires
-    const stemMaterial = new THREE.MeshStandardMaterial({
-      color: 0xe5e7eb,
+    // Glass stem (internal transparent support)
+    const stemMat = regMat(new THREE.MeshStandardMaterial({
+      color: 0xd6d3d1,
       transparent: true,
-      opacity: 0.5,
-      roughness: 0.2,
-    });
+      opacity: 0.45,
+      roughness: 0.15,
+      metalness: 0.0,
+    }));
 
-    const wireMaterial = new THREE.MeshStandardMaterial({
-      color: 0x9ca3af,
+    // Internal wire leads
+    const wireMat = regMat(new THREE.MeshStandardMaterial({
+      color: 0xa1a1aa,
       roughness: 0.3,
-      metalness: 0.85,
-    });
+      metalness: 0.8,
+    }));
 
-    // E. Glowing LED Filament Material
-    const filamentMaterial = new THREE.MeshStandardMaterial({
-      color: 0xd97706,
-      emissive: new THREE.Color(0xff9900),
-      emissiveIntensity: 0.0,
-      roughness: 0.3,
-      metalness: 0.2,
-    });
+    // Central hub disc connecting filament strips to stem
+    const hubMat = regMat(new THREE.MeshStandardMaterial({
+      color: 0xb0b0b0,
+      roughness: 0.35,
+      metalness: 0.7,
+    }));
 
-    // =========================================================================
-    // 3D GEOMETRY CONSTRUCTION
-    // =========================================================================
+    // LED FILAMENT STRIPS — main emissive element
+    const filamentMat = regMat(new THREE.MeshStandardMaterial({
+      color: 0x78716c, // cold: warm grey
+      emissive: new THREE.Color(0x000000),
+      emissiveIntensity: 0,
+      roughness: 0.45,
+      metalness: 0.15,
+    }));
 
-    // 1. Procedural Glass Bulb Envelope (A19 / Edison teardrop contour)
-    const bulbPoints = [];
-    // Start at bottom neck transition
-    bulbPoints.push(new THREE.Vector2(0.24, -0.45));
-    bulbPoints.push(new THREE.Vector2(0.28, -0.32));
-    bulbPoints.push(new THREE.Vector2(0.36, -0.15));
-    bulbPoints.push(new THREE.Vector2(0.52, 0.08));
-    bulbPoints.push(new THREE.Vector2(0.68, 0.35));
-    bulbPoints.push(new THREE.Vector2(0.74, 0.62));
-    bulbPoints.push(new THREE.Vector2(0.70, 0.88));
-    bulbPoints.push(new THREE.Vector2(0.55, 1.10));
-    bulbPoints.push(new THREE.Vector2(0.34, 1.25));
-    bulbPoints.push(new THREE.Vector2(0.12, 1.32));
-    bulbPoints.push(new THREE.Vector2(0.00, 1.34)); // Top apex
-
-    const glassGeom = registerGeom(new THREE.LatheGeometry(bulbPoints, 36));
-    const glassMesh = new THREE.Mesh(glassGeom, glassMaterial);
+    // =====================================================================
+    // GEOMETRY: GLASS ENVELOPE (A19 pear contour)
+    // =====================================================================
+    const bulbProfile = [
+      new THREE.Vector2(0.22, -0.48),
+      new THREE.Vector2(0.25, -0.38),
+      new THREE.Vector2(0.30, -0.25),
+      new THREE.Vector2(0.38, -0.10),
+      new THREE.Vector2(0.50, 0.08),
+      new THREE.Vector2(0.62, 0.28),
+      new THREE.Vector2(0.70, 0.48),
+      new THREE.Vector2(0.73, 0.65),
+      new THREE.Vector2(0.72, 0.80),
+      new THREE.Vector2(0.66, 0.94),
+      new THREE.Vector2(0.55, 1.06),
+      new THREE.Vector2(0.42, 1.16),
+      new THREE.Vector2(0.28, 1.24),
+      new THREE.Vector2(0.14, 1.29),
+      new THREE.Vector2(0.00, 1.31),
+    ];
+    const glassGeom = reg(new THREE.LatheGeometry(bulbProfile, 48));
+    const glassMesh = new THREE.Mesh(glassGeom, glassMat);
     bulbGroup.add(glassMesh);
 
-    // 2. Metallic Screw Base (E27 thread pattern)
-    // Cylindrical core
-    const baseCoreGeom = registerGeom(new THREE.CylinderGeometry(0.25, 0.23, 0.45, 32));
-    const baseCoreMesh = new THREE.Mesh(baseCoreGeom, brassBaseMaterial);
-    baseCoreMesh.position.y = -0.68;
+    // =====================================================================
+    // GEOMETRY: SCREW BASE (E27)
+    // =====================================================================
+    const baseCoreGeom = reg(new THREE.CylinderGeometry(0.235, 0.22, 0.44, 36));
+    const baseCoreMesh = new THREE.Mesh(baseCoreGeom, brassMat);
+    baseCoreMesh.position.y = -0.70;
     bulbGroup.add(baseCoreMesh);
 
-    // 4 Distinct Screw Ridges / Threads
-    for (let r = 0; r < 4; r++) {
-      const ridgeGeom = registerGeom(new THREE.TorusGeometry(0.248, 0.024, 12, 32));
-      const ridgeMesh = new THREE.Mesh(ridgeGeom, brassBaseMaterial);
-      ridgeMesh.rotation.x = Math.PI / 2;
-      ridgeMesh.position.y = -0.52 - r * 0.1;
-      bulbGroup.add(ridgeMesh);
+    // Thread ridges
+    for (let r = 0; r < 5; r++) {
+      const ridgeG = reg(new THREE.TorusGeometry(0.234, 0.018, 10, 36));
+      const ridgeM = new THREE.Mesh(ridgeG, brassMat);
+      ridgeM.rotation.x = Math.PI / 2;
+      ridgeM.position.y = -0.53 - r * 0.085;
+      bulbGroup.add(ridgeM);
     }
 
-    // 3. Black Insulator Ring & Bottom Contact Tip
-    const insulatorGeom = registerGeom(new THREE.CylinderGeometry(0.21, 0.14, 0.08, 24));
-    const insulatorMesh = new THREE.Mesh(insulatorGeom, insulatorMaterial);
-    insulatorMesh.position.y = -0.93;
-    bulbGroup.add(insulatorMesh);
+    // Insulator ring
+    const insGeom = reg(new THREE.CylinderGeometry(0.20, 0.13, 0.07, 28));
+    const insMesh = new THREE.Mesh(insGeom, insulatorMat);
+    insMesh.position.y = -0.95;
+    bulbGroup.add(insMesh);
 
-    const contactGeom = registerGeom(new THREE.CylinderGeometry(0.09, 0.05, 0.04, 24));
-    const contactMesh = new THREE.Mesh(contactGeom, contactPointMaterial);
-    contactMesh.position.y = -0.98;
-    bulbGroup.add(contactMesh);
+    // Contact tip
+    const contGeom = reg(new THREE.CylinderGeometry(0.08, 0.04, 0.04, 24));
+    const contMesh = new THREE.Mesh(contGeom, contactMat);
+    contMesh.position.y = -1.0;
+    bulbGroup.add(contMesh);
 
-    // 4. Internal Glass Mount & Support Stem
-    const stemGeom = registerGeom(new THREE.CylinderGeometry(0.065, 0.11, 0.38, 20));
-    const stemMesh = new THREE.Mesh(stemGeom, stemMaterial);
-    stemMesh.position.y = -0.28;
+    // =====================================================================
+    // GEOMETRY: INTERNAL GLASS STEM & LEAD WIRES
+    // =====================================================================
+    // Tapered glass stem from base neck to filament area
+    const stemGeom = reg(new THREE.CylinderGeometry(0.05, 0.10, 0.50, 20));
+    const stemMesh = new THREE.Mesh(stemGeom, stemMat);
+    stemMesh.position.y = -0.22;
     bulbGroup.add(stemMesh);
 
-    // 5. Internal Metallic Support Leads
-    const leadGeom = registerGeom(new THREE.CylinderGeometry(0.009, 0.009, 0.42, 12));
-    
-    const lead1 = new THREE.Mesh(leadGeom, wireMaterial);
-    lead1.position.set(0.09, 0.05, 0);
-    lead1.rotation.z = -0.15;
+    // Two thin internal lead wires
+    const leadGeom = reg(new THREE.CylinderGeometry(0.006, 0.006, 0.55, 8));
+    const lead1 = new THREE.Mesh(leadGeom, wireMat);
+    lead1.position.set(0.06, 0.0, 0);
+    lead1.rotation.z = -0.08;
     bulbGroup.add(lead1);
 
-    const lead2 = new THREE.Mesh(leadGeom, wireMaterial);
-    lead2.position.set(-0.09, 0.05, 0);
-    lead2.rotation.z = 0.15;
+    const lead2 = new THREE.Mesh(leadGeom, wireMat);
+    lead2.position.set(-0.06, 0.0, 0);
+    lead2.rotation.z = 0.08;
     bulbGroup.add(lead2);
 
-    // 6. Realistic Vintage LED Filament Bars
-    // 4 vertical arched filament sticks forming classic Edison/LED chandelier look
-    const numFilaments = 4;
-    const filamentGeom = registerGeom(new THREE.CylinderGeometry(0.016, 0.016, 0.46, 16));
+    // =====================================================================
+    // GEOMETRY: LED FILAMENT ASSEMBLY
+    // =====================================================================
 
-    for (let f = 0; f < numFilaments; f++) {
-      const angle = (f * Math.PI * 2) / numFilaments;
-      const radius = 0.13;
-      const filamentMesh = new THREE.Mesh(filamentGeom, filamentMaterial);
-      filamentMesh.position.set(
-        Math.cos(angle) * radius,
-        0.44,
-        Math.sin(angle) * radius
+    // Small hub disc at top of stem — filament mounting plate
+    const hubGeom = reg(new THREE.CylinderGeometry(0.09, 0.06, 0.025, 24));
+    const hubMesh = new THREE.Mesh(hubGeom, hubMat);
+    hubMesh.position.y = 0.06;
+    bulbGroup.add(hubMesh);
+
+    // Central post extending from hub upward
+    const postGeom = reg(new THREE.CylinderGeometry(0.012, 0.012, 0.72, 10));
+    const postMesh = new THREE.Mesh(postGeom, wireMat);
+    postMesh.position.y = 0.42;
+    bulbGroup.add(postMesh);
+
+    // 8 thin LED filament strips arranged around the central post
+    // These are narrow vertical bars — the primary emissive elements
+    const numStrips = 8;
+    const stripGeom = reg(new THREE.BoxGeometry(0.008, 0.58, 0.025));
+    const filamentMeshes = [];
+
+    for (let i = 0; i < numStrips; i++) {
+      const angle = (i * Math.PI * 2) / numStrips;
+      const r = 0.08; // tight ring around the central post
+      const strip = new THREE.Mesh(stripGeom, filamentMat);
+      strip.position.set(
+        Math.cos(angle) * r,
+        0.38,
+        Math.sin(angle) * r,
       );
-      // Slight outward lean
-      filamentMesh.rotation.x = Math.sin(angle) * 0.1;
-      filamentMesh.rotation.z = -Math.cos(angle) * 0.1;
-      bulbGroup.add(filamentMesh);
+      // Face outward
+      strip.rotation.y = -angle;
+      // Very slight outward fan
+      strip.rotation.x = Math.sin(angle) * 0.04;
+      strip.rotation.z = -Math.cos(angle) * 0.04;
+      bulbGroup.add(strip);
+      filamentMeshes.push(strip);
     }
 
-    // 7. Radiant Central Glow Core — warm orb visible through clear glass when lit
-    const glowCoreGeom = registerGeom(new THREE.SphereGeometry(0.28, 24, 24));
-    const glowCoreMaterial = new THREE.MeshBasicMaterial({
-      color: 0xfbbf24, // warm amber glow
-      transparent: true,
-      opacity: 0.0,
-      depthWrite: false,
-    });
-    const glowCoreMesh = new THREE.Mesh(glowCoreGeom, glowCoreMaterial);
-    glowCoreMesh.position.y = 0.44;
-    bulbGroup.add(glowCoreMesh);
+    // Tiny top cap at the apex of the filament assembly
+    const topCapGeom = reg(new THREE.SphereGeometry(0.02, 12, 12));
+    const topCapMesh = new THREE.Mesh(topCapGeom, wireMat);
+    topCapMesh.position.y = 0.78;
+    bulbGroup.add(topCapMesh);
 
-    // =========================================================================
-    // ANIMATION & STATE TRANSITION LOOP
-    // =========================================================================
-    let animationFrameId;
+    // Small, contained inner glow — NOT a giant sphere. Just a soft haze
+    // around the filament strips to simulate light scatter inside the glass.
+    const hazeGeom = reg(new THREE.SphereGeometry(0.10, 16, 16));
+    const hazeMat = regMat(new THREE.MeshBasicMaterial({
+      color: 0xfef3c7, // very warm cream
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    }));
+    const hazeMesh = new THREE.Mesh(hazeGeom, hazeMat);
+    hazeMesh.position.y = 0.42;
+    bulbGroup.add(hazeMesh);
+
+    // =====================================================================
+    // ANIMATION LOOP
+    // =====================================================================
+    let animId;
     const clock = new THREE.Clock();
 
+    // Pre-allocated colors to avoid GC in the animation loop
+    const coldFilamentColor = new THREE.Color(0x78716c);  // dark warm grey
+    const hotFilamentColor = new THREE.Color(0xfde68a);   // warm white-amber (~2700K look)
+    const coldEmissive = new THREE.Color(0x000000);
+    const hotEmissive = new THREE.Color(0xf59e0b);        // warm amber emission
+    const coldGlass = new THREE.Color(0xfcfcfc);
+    const warmGlass = new THREE.Color(0xfff9f0);          // barely perceptible warm tint
+
     const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
+      animId = requestAnimationFrame(animate);
       const delta = Math.min(clock.getDelta(), 0.1);
-      const state = stateRef.current;
+      const s = stateRef.current;
 
-      // Smooth interpolation for warm illumination ramp
-      const glowLerpSpeed = 7.0;
-      state.currentGlow += (state.targetGlow - state.currentGlow) * Math.min(1.0, delta * glowLerpSpeed);
+      // Smooth state transition (300-600ms range)
+      s.currentGlow += (s.targetGlow - s.currentGlow) * Math.min(1.0, delta * 6.5);
 
-      // Handle subtle pending state pulse
-      let effectiveGlow = state.currentGlow;
-      if (state.isPending) {
-        effectiveGlow = 0.35 + Math.sin(clock.getElapsedTime() * 8) * 0.25;
+      let glow = s.currentGlow;
+      // Pending: gentle pulse around mid-brightness
+      if (s.isPending) {
+        glow = 0.4 + Math.sin(clock.getElapsedTime() * 6) * 0.2;
       }
 
-      // === NATURAL BULB GLOW: glass stays clear, light comes from inside ===
+      // ---------------------------------------------------------------
+      // STUDIO & AMBIENT LIGHTING — gentle reduction when OFF, warm boost when ON
+      // ---------------------------------------------------------------
+      ambientLight.intensity = 0.95 + glow * 0.35;
 
-      // Glass: stays mostly clear — just gains a very subtle warm tint and faint inner emission
-      // This keeps the bulb looking like real glass, not a painted yellow blob
-      glassMaterial.opacity = 0.28 + effectiveGlow * 0.12;  // slightly more visible when lit
-      glassMaterial.transmission = 0.92 - effectiveGlow * 0.15; // slightly less transparent
-      const glassTint = new THREE.Color(0xfdfcfa);
-      const glassWarm = new THREE.Color(0xfff7ed); // very subtle warm white, NOT yellow
-      glassMaterial.color.lerpColors(glassTint, glassWarm, effectiveGlow);
-      glassMaterial.emissiveIntensity = effectiveGlow * 0.15; // extremely faint
-      glassMaterial.emissive.set(0xfbbf24);
+      // ---------------------------------------------------------------
+      // FILAMENT STRIPS — the main visual difference between ON and OFF
+      // ---------------------------------------------------------------
+      // Color: dark grey → warm white-amber (~2700K look)
+      filamentMat.color.lerpColors(coldFilamentColor, hotFilamentColor, glow);
+      // Emissive: unlit black → warm amber
+      filamentMat.emissive.lerpColors(coldEmissive, hotEmissive, glow);
+      filamentMat.emissiveIntensity = glow * 4.2;
 
-      // Filaments: these are the MAIN source of visible glow — go from dark grey to bright hot orange
-      const coldFilament = new THREE.Color(0x78716c); // unlit: dull stone grey
-      const hotFilament = new THREE.Color(0xfbbf24);  // lit: bright incandescent amber
-      filamentMaterial.color.lerpColors(coldFilament, hotFilament, effectiveGlow);
-      filamentMaterial.emissive.lerpColors(
-        new THREE.Color(0x000000),
-        new THREE.Color(0xff8c00), // strong orange emission
-        effectiveGlow
-      );
-      filamentMaterial.emissiveIntensity = effectiveGlow * 6.0;
+      // ---------------------------------------------------------------
+      // GLASS ENVELOPE — stays essentially clear, just subtle warmth
+      // ---------------------------------------------------------------
+      glassMat.color.lerpColors(coldGlass, warmGlass, glow);
+      glassMat.emissive.lerpColors(coldEmissive, hotEmissive, glow);
+      glassMat.emissiveIntensity = glow * 0.05; // very faint warmth
+      glassMat.opacity = 0.22 + glow * 0.05;
+      glassMat.transmission = 0.94 - glow * 0.05;
 
-      // Glow core: warm bright sphere visible through glass — the main "light is on" indicator
-      glowCoreMaterial.opacity = effectiveGlow * 0.65;
+      // ---------------------------------------------------------------
+      // INNER HAZE — very small, subtle light scatter near filaments
+      // ---------------------------------------------------------------
+      hazeMat.opacity = glow * 0.22;
 
-      // Point light: casts warm illumination on screw base and surrounding scene
-      bulbPointLight.intensity = effectiveGlow * 3.0;
-      bulbPointLight.color.set(effectiveGlow > 0.5 ? 0xfbbf24 : 0xfef3c7);
+      // ---------------------------------------------------------------
+      // POINT LIGHT — illuminates screw base and nearby glass surfaces
+      // ---------------------------------------------------------------
+      bulbPointLight.intensity = glow * 2.2;
+      bulbPointLight.color.setHex(0xfde68a);
 
-      // Render the scene
       renderer.render(scene, camera);
     };
 
     animate();
 
-    // Resize handling
-    const handleResize = () => {
+    // Resize
+    const onResize = () => {
       if (!container) return;
-      const newWidth = container.clientWidth || 140;
-      camera.aspect = newWidth / canvasHeight;
+      const w = container.clientWidth || 140;
+      camera.aspect = w / canvasHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(newWidth, canvasHeight);
+      renderer.setSize(w, canvasHeight);
     };
+    const ro = new ResizeObserver(onResize);
+    ro.observe(container);
 
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(container);
-
-    // Cleanup on unmount
+    // Cleanup
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      resizeObserver.disconnect();
-
-      geometriesToDispose.forEach((g) => g.dispose());
-      glassMaterial.dispose();
-      brassBaseMaterial.dispose();
-      insulatorMaterial.dispose();
-      contactPointMaterial.dispose();
-      stemMaterial.dispose();
-      wireMaterial.dispose();
-      filamentMaterial.dispose();
-      glowCoreMaterial.dispose();
+      cancelAnimationFrame(animId);
+      ro.disconnect();
+      geometries.forEach((g) => g.dispose());
+      materials.forEach((m) => m.dispose());
       renderer.dispose();
-
-      if (renderer.domElement && renderer.domElement.parentNode) {
+      if (renderer.domElement?.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     };
   }, [height]);
 
-  // Graceful WebGL Fallback
+  // WebGL fallback
   if (!webglSupported) {
     return (
       <div

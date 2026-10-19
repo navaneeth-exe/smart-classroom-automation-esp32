@@ -150,13 +150,28 @@ export default function PhysicalLedControl({
           </span>
         </div>
 
-        {/* 3D WebGL Bulb Stage */}
-        <div className="relative rounded-2xl min-h-[175px] sm:min-h-[195px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#fbf9f4] via-[#f4efe5] to-[#eae2d3] border border-stone-200/80 shadow-inner">
-          {/* Warm glowing radiant aura when illuminated */}
+        {/* 3D WebGL Bulb Stage: Smooth ambient crossfade between muted beige-gray (OFF) and warm ivory (ON) */}
+        <div className="relative rounded-2xl min-h-[175px] sm:min-h-[195px] flex items-center justify-center overflow-hidden border border-stone-200/80 shadow-inner">
+          {/* Muted beige-gray background for confirmed OFF state (gentle darkening, preserving bulb visibility) */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#e8e4de] via-[#ded9d0] to-[#d0cbc2]" />
+
+          {/* Warm ivory background for confirmed ON state (crossfades smoothly over 500ms) */}
           <div
-            className={`absolute inset-0 bg-radial from-amber-400/35 via-amber-200/20 to-transparent blur-2xl transition-opacity duration-700 pointer-events-none ${
-              isLightOn ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 bg-gradient-to-b from-[#fdfbf7] via-[#f7f2ea] to-[#eee6d8] transition-opacity duration-500 ease-out pointer-events-none ${
+              isLightOn && isOnline ? 'opacity-100' : 'opacity-0'
             }`}
+          />
+
+          {/* Small, soft warm radial glow centered around the bulb when illuminated */}
+          <div
+            className={`absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-56 sm:h-56 rounded-full pointer-events-none transition-opacity duration-500 ease-out ${
+              isLightOn && isOnline ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{
+              background:
+                'radial-gradient(circle, rgba(254, 243, 199, 0.70) 0%, rgba(251, 191, 36, 0.28) 32%, rgba(245, 158, 11, 0.08) 58%, transparent 75%)',
+              filter: 'blur(14px)',
+            }}
           />
 
           <Bulb3D
@@ -171,11 +186,13 @@ export default function PhysicalLedControl({
           <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/90 backdrop-blur-md border border-stone-200/80 shadow-sm text-[10px]">
             <span className="text-stone-400 font-medium">Bulb State:</span>
             <span className="font-bold text-stone-800">
-              {isLightOn ? 'Illuminated' : 'Extinguished'}
+              {isLightOn && isOnline ? 'Illuminated' : 'Extinguished'}
             </span>
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                isLightOn ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.9)] animate-pulse' : 'bg-stone-300'
+                isLightOn && isOnline
+                  ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.9)] animate-pulse'
+                  : 'bg-stone-300'
               }`}
             />
           </div>
