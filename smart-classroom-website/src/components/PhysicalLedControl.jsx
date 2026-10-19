@@ -156,9 +156,9 @@ export default function PhysicalLedControl({
           {/* Light, creamy ivory background for confirmed OFF state (original light, evenly illuminated) */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#fbf9f4] via-[#f4efe5] to-[#eae2d3]" />
 
-          {/* Subtle warm beige/muted amber-gray background for confirmed ON state (slightly darker/warmer than OFF) */}
+          {/* Soft, light warm-beige background for confirmed ON state (reduced darkness, subtle warmth) */}
           <div
-            className={`absolute inset-0 bg-gradient-to-b from-[#ded8cd] via-[#d5cdbf] to-[#c5bcae] transition-opacity duration-500 ease-out pointer-events-none ${
+            className={`absolute inset-0 bg-gradient-to-b from-[#f3eee5] via-[#ebe3d5] to-[#dfd6c6] transition-opacity duration-500 ease-out pointer-events-none ${
               isConfirmedOn ? 'opacity-100' : 'opacity-0'
             }`}
           />

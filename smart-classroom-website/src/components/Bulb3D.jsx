@@ -370,9 +370,9 @@ export default function Bulb3D({
       }
 
       // ---------------------------------------------------------------
-      // STUDIO & AMBIENT LIGHTING — softly and evenly illuminated when OFF, slightly deeper when ON
+      // STUDIO & AMBIENT LIGHTING — softly illuminated in both states, keeping stage bright
       // ---------------------------------------------------------------
-      ambientLight.intensity = 1.15 - glow * 0.10;
+      ambientLight.intensity = 1.15 - glow * 0.04;
 
       // ---------------------------------------------------------------
       // FILAMENT STRIPS — the main visual difference between ON and OFF
