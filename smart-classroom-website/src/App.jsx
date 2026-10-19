@@ -11,7 +11,6 @@ import { AlertCircle, Sparkles, WifiOff } from 'lucide-react';
 
 export default function App() {
   const [activePage, setActivePage] = useState('overview');
-  const [userName, setUserName] = useState('Kai');
   const [roomName, setRoomName] = useState('Classroom 1');
 
   // Virtual classroom lighting mood state (software filter)
@@ -68,10 +67,10 @@ export default function App() {
 
       {/* 2. Main Studio Content Area */}
       <div className="flex-1 flex flex-col min-w-0 max-w-[1600px] mx-auto relative z-10">
-        {/* Top Header matching reference */}
+        {/* Top Header */}
         <Header
-          userName={userName}
           roomName={roomName}
+          data={data}
           isOnline={isOnline}
           isTestMode={isTestMode}
           onRefresh={refreshNow}

@@ -151,10 +151,10 @@ export default function PhysicalLedControl({
         </div>
 
         {/* 3D WebGL Bulb Stage */}
-        <div className="relative rounded-2xl min-h-[170px] sm:min-h-[190px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#fdfbf7] via-[#f7f4ed] to-[#ede7dc]/60 border border-stone-200/70 shadow-inner">
-          {/* Warm architectural sunlight halo behind bulb */}
+        <div className="relative rounded-2xl min-h-[175px] sm:min-h-[195px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#fbf9f4] via-[#f4efe5] to-[#eae2d3] border border-stone-200/80 shadow-inner">
+          {/* Warm glowing radiant aura when illuminated */}
           <div
-            className={`absolute inset-0 bg-amber-300/30 blur-2xl transition-opacity duration-700 pointer-events-none ${
+            className={`absolute inset-0 bg-radial from-amber-400/35 via-amber-200/20 to-transparent blur-2xl transition-opacity duration-700 pointer-events-none ${
               isLightOn ? 'opacity-100' : 'opacity-0'
             }`}
           />
@@ -168,14 +168,14 @@ export default function PhysicalLedControl({
           />
 
           {/* Floating Subtle Stage Badge */}
-          <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/85 backdrop-blur-md border border-stone-200/80 shadow-sm text-[10px]">
+          <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/90 backdrop-blur-md border border-stone-200/80 shadow-sm text-[10px]">
             <span className="text-stone-400 font-medium">Bulb State:</span>
             <span className="font-bold text-stone-800">
               {isLightOn ? 'Illuminated' : 'Extinguished'}
             </span>
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                isLightOn ? 'bg-amber-400 animate-pulse' : 'bg-stone-300'
+                isLightOn ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.9)] animate-pulse' : 'bg-stone-300'
               }`}
             />
           </div>

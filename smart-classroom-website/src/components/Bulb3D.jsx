@@ -87,17 +87,17 @@ export default function Bulb3D({
     scene.add(ambientLight);
 
     // Main studio key light casting highlights on glass curvature and metal screw
-    const keyLight = new THREE.DirectionalLight(0xfffaed, 2.2);
+    const keyLight = new THREE.DirectionalLight(0xfffaed, 2.5);
     keyLight.position.set(3, 5, 4);
     scene.add(keyLight);
 
     // Rim light defining glass outer edges
-    const rimLight = new THREE.DirectionalLight(0xc7d2fe, 0.9);
+    const rimLight = new THREE.DirectionalLight(0xffedd5, 1.8);
     rimLight.position.set(-3, -1, -3);
     scene.add(rimLight);
 
     // Internal Point Light for emissive bulb glow
-    const bulbPointLight = new THREE.PointLight(0xfef08a, 0.0, 3.5, 1.2);
+    const bulbPointLight = new THREE.PointLight(0xf59e0b, 0.0, 4.0, 1.2);
     bulbPointLight.position.set(0, 0.35, 0);
     scene.add(bulbPointLight);
 
@@ -119,16 +119,16 @@ export default function Bulb3D({
     // MATERIALS
     // =========================================================================
 
-    // A. Glass Envelope Material (Refractive with subtle specular highlight)
+    // A. Glass Envelope Material — stays clear/translucent, lets internal glow shine through
     const glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff,
+      color: 0xfdfcfa,
       transparent: true,
-      opacity: 0.38,
-      roughness: 0.08,
-      metalness: 0.05,
-      transmission: 0.88,
+      opacity: 0.32,
+      roughness: 0.05,
+      metalness: 0.0,
+      transmission: 0.92,
       ior: 1.5,
-      emissive: new THREE.Color(0xfef3c7),
+      emissive: new THREE.Color(0x000000),
       emissiveIntensity: 0.0,
       depthWrite: false,
     });
@@ -170,10 +170,10 @@ export default function Bulb3D({
     // E. Glowing LED Filament Material
     const filamentMaterial = new THREE.MeshStandardMaterial({
       color: 0xd97706,
-      emissive: new THREE.Color(0xfbbf24),
+      emissive: new THREE.Color(0xff9900),
       emissiveIntensity: 0.0,
-      roughness: 0.4,
-      metalness: 0.1,
+      roughness: 0.3,
+      metalness: 0.2,
     });
 
     // =========================================================================
@@ -265,10 +265,10 @@ export default function Bulb3D({
       bulbGroup.add(filamentMesh);
     }
 
-    // 7. Subtle Central Glow Core (Spherical light-diffusion core)
-    const glowCoreGeom = registerGeom(new THREE.SphereGeometry(0.18, 20, 20));
+    // 7. Radiant Central Glow Core — warm orb visible through clear glass when lit
+    const glowCoreGeom = registerGeom(new THREE.SphereGeometry(0.28, 24, 24));
     const glowCoreMaterial = new THREE.MeshBasicMaterial({
-      color: 0xfef08a,
+      color: 0xfbbf24, // warm amber glow
       transparent: true,
       opacity: 0.0,
       depthWrite: false,
@@ -288,7 +288,7 @@ export default function Bulb3D({
       const delta = Math.min(clock.getDelta(), 0.1);
       const state = stateRef.current;
 
-      // Smooth interpolation for warm illumination ramp (simulates real incandescent/LED phosphor ramp)
+      // Smooth interpolation for warm illumination ramp
       const glowLerpSpeed = 7.0;
       state.currentGlow += (state.targetGlow - state.currentGlow) * Math.min(1.0, delta * glowLerpSpeed);
 
@@ -298,11 +298,35 @@ export default function Bulb3D({
         effectiveGlow = 0.35 + Math.sin(clock.getElapsedTime() * 8) * 0.25;
       }
 
-      // Update materials according to confirmed hardware glow
-      filamentMaterial.emissiveIntensity = effectiveGlow * 3.2;
-      glassMaterial.emissiveIntensity = effectiveGlow * 0.42;
-      glowCoreMaterial.opacity = effectiveGlow * 0.55;
-      bulbPointLight.intensity = effectiveGlow * 2.2;
+      // === NATURAL BULB GLOW: glass stays clear, light comes from inside ===
+
+      // Glass: stays mostly clear — just gains a very subtle warm tint and faint inner emission
+      // This keeps the bulb looking like real glass, not a painted yellow blob
+      glassMaterial.opacity = 0.28 + effectiveGlow * 0.12;  // slightly more visible when lit
+      glassMaterial.transmission = 0.92 - effectiveGlow * 0.15; // slightly less transparent
+      const glassTint = new THREE.Color(0xfdfcfa);
+      const glassWarm = new THREE.Color(0xfff7ed); // very subtle warm white, NOT yellow
+      glassMaterial.color.lerpColors(glassTint, glassWarm, effectiveGlow);
+      glassMaterial.emissiveIntensity = effectiveGlow * 0.15; // extremely faint
+      glassMaterial.emissive.set(0xfbbf24);
+
+      // Filaments: these are the MAIN source of visible glow — go from dark grey to bright hot orange
+      const coldFilament = new THREE.Color(0x78716c); // unlit: dull stone grey
+      const hotFilament = new THREE.Color(0xfbbf24);  // lit: bright incandescent amber
+      filamentMaterial.color.lerpColors(coldFilament, hotFilament, effectiveGlow);
+      filamentMaterial.emissive.lerpColors(
+        new THREE.Color(0x000000),
+        new THREE.Color(0xff8c00), // strong orange emission
+        effectiveGlow
+      );
+      filamentMaterial.emissiveIntensity = effectiveGlow * 6.0;
+
+      // Glow core: warm bright sphere visible through glass — the main "light is on" indicator
+      glowCoreMaterial.opacity = effectiveGlow * 0.65;
+
+      // Point light: casts warm illumination on screw base and surrounding scene
+      bulbPointLight.intensity = effectiveGlow * 3.0;
+      bulbPointLight.color.set(effectiveGlow > 0.5 ? 0xfbbf24 : 0xfef3c7);
 
       // Render the scene
       renderer.render(scene, camera);

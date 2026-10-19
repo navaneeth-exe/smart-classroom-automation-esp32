@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Building2, ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
+import {
+  Sun,
+  Building2,
+  ChevronDown,
+  RefreshCw,
+  Sparkles,
+  Activity,
+} from 'lucide-react';
 
 export default function Header({
-  userName = 'Kai',
   roomName = 'Classroom 1',
+  data,
   isOnline,
   isTestMode,
   onRefresh,
@@ -37,27 +44,63 @@ export default function Header({
     return () => clearInterval(interval);
   }, []);
 
-  // Time-of-day greeting
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+  const isOccupied = Boolean(data?.occupied);
+  const temp = data?.temperature;
+  const isLightOn = Boolean(data?.led);
+
+  // Dynamic high-level classroom health summary
+  let envStatusText = 'Autonomous Environment Governance Active';
+  if (!isOnline && !isTestMode) {
+    envStatusText = 'ESP32 Gateway Offline · Microcontroller Unreachable';
+  } else if (temp !== null && temp !== undefined) {
+    const climateStr =
+      temp < 25 ? 'Mild Climate' : temp > 29 ? 'Elevated Temp' : 'Optimal Climate';
+    const occStr = isOccupied ? 'Occupied' : 'Vacant';
+    const lightStr = isLightOn ? 'LED Active' : 'Lighting Conserved';
+    envStatusText = `${occStr} · ${climateStr} (${Number(temp).toFixed(1)}°C) · ${lightStr}`;
+  }
 
   return (
     <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
-      {/* Left Title and Breadcrumbs */}
+      {/* Left Title and Real-Time Operational Context */}
       <div>
-        <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium mb-1">
-          <Building2 className="w-3.5 h-3.5 text-stone-400" />
-          <span>{roomName}</span>
+        <div className="flex items-center gap-2 text-xs text-stone-500 font-medium mb-1">
+          <div className="flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-stone-400" />
+            <span className="font-semibold text-stone-700">{roomName}</span>
+          </div>
+          <span className="text-stone-300">/</span>
+          <span className="text-stone-400">IoT Operations Center</span>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight">
-          {greeting}, {userName}
-        </h1>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight">
+            Classroom Automation Studio
+          </h1>
 
-        <p className="text-xs text-stone-400 font-medium mt-0.5">
-          Monitored · Automated · Comfortable Learning Environment
-        </p>
+          {/* Real-time System Status Pill */}
+          {!isOnline && !isTestMode ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              Gateway Offline
+            </span>
+          ) : isTestMode ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-xs">
+              <Sparkles className="w-3 h-3 text-purple-600" />
+              Simulation Active
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Systems Nominal
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium mt-1">
+          <Activity className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
+          <span>{envStatusText}</span>
+        </div>
       </div>
 
       {/* Right Capsules */}
