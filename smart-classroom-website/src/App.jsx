@@ -11,7 +11,7 @@ import { AlertCircle, Sparkles, WifiOff } from 'lucide-react';
 
 export default function App() {
   const [activePage, setActivePage] = useState('overview');
-  const [userName, setUserName] = useState('Ahmad');
+  const [userName, setUserName] = useState('Kai');
   const [roomName, setRoomName] = useState('Classroom 1');
 
   // Virtual classroom lighting mood state (software filter)

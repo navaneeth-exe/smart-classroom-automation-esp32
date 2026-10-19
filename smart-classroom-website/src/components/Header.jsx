@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sun, Building2, ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
 
 export default function Header({
-  userName = 'Educator',
+  userName = 'Kai',
   roomName = 'Classroom 1',
   isOnline,
   isTestMode,
